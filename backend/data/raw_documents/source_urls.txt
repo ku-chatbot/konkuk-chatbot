@@ -1,0 +1,37 @@
+# 문서 출처 매핑
+# 현재 raw_documents에 실제 PDF 파일이 있는 항목만 정리했습니다.
+# 형식:
+# file: raw_documents 기준 상대 경로
+# title: 문서 제목
+# category: university | academic | scholarship | international | dormitory | certificate | event
+# url: 답변 하단에 표시할 공식 출처 URL
+
+---
+file: 01_university/대학소개_신입생가이드북_2026.pdf
+title: 2026 건국대학교 신입생 가이드북
+category: university
+url: https://www.konkuk.ac.kr/sites/konkuk/down/konkuk_guide_freshman_2026.pdf
+
+---
+file: 03_scholarship/장학금_수혜계좌_등록.pdf
+title: 장학금 수혜계좌 등록
+category: scholarship
+url: https://www.konkuk.ac.kr/konkuk/2407/subview.do
+
+---
+file: 03_scholarship/장학금_위치_및_전화번호.pdf
+title: 장학복지팀 위치 및 전화번호
+category: scholarship
+url: https://www.konkuk.ac.kr/konkuk/2408/subview.do
+
+---
+file: 03_scholarship/장학금_종류.pdf
+title: 장학금 종류
+category: scholarship
+url: https://www.konkuk.ac.kr/konkuk/2202/subview.do
+
+---
+file: 04_international/국제교류_교류대학.pdf
+title: 국제교류 교류대학
+category: international
+url: https://www.konkuk.ac.kr/oia/18766/subview.do

@@ -117,3 +117,42 @@ class AcademicDocument(Base):
     title = Column(String(120), nullable=False)
     category = Column(String(40), nullable=False)
     content = Column(Text, nullable=False)
+
+
+class ReferenceDocument(Base):
+    __tablename__ = "reference_document"
+
+    id = Column(Integer, primary_key=True)
+    file_path = Column(String(300), nullable=False, unique=True)
+    title = Column(String(200), nullable=False)
+    category = Column(String(40), nullable=False)
+    source_url = Column(Text, nullable=False)
+    parsed_markdown_path = Column(String(300), nullable=True)
+    parsed_html_path = Column(String(300), nullable=True)
+    raw_response_path = Column(String(300), nullable=True)
+    parser = Column(String(80), nullable=False, default="upstage-document-parse")
+    status = Column(String(30), nullable=False, default="pending")
+    error = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+    chunks = relationship("ReferenceChunk", back_populates="document", cascade="all, delete-orphan")
+
+
+class ReferenceChunk(Base):
+    __tablename__ = "reference_chunk"
+
+    id = Column(Integer, primary_key=True)
+    document_id = Column(Integer, ForeignKey("reference_document.id"), nullable=False)
+    chunk_index = Column(Integer, nullable=False)
+    content = Column(Text, nullable=False)
+    page_start = Column(Integer, nullable=True)
+    page_end = Column(Integer, nullable=True)
+    heading = Column(String(200), nullable=True)
+    vector_id = Column(Integer, nullable=True, unique=True)
+    token_count = Column(Integer, nullable=False, default=0)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    __table_args__ = (UniqueConstraint("document_id", "chunk_index", name="uc_reference_chunk_document_index"),)
+
+    document = relationship("ReferenceDocument", back_populates="chunks")

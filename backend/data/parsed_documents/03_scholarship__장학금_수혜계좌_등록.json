@@ -1,0 +1,495 @@
+{
+  "api": "2.0",
+  "content": {
+    "html": "<header id='0' style='font-size:16px'>장학금 수혜계좌 등록</header>\n<p id='1' data-category='paragraph' style='font-size:22px'>장학금 수혜계좌 등록</p>\n<p id='2' data-category='paragraph' style='font-size:22px'>장학금 수혜계좌 등록 방법</p>\n<br><figure id='3'><img alt=\"\" data-coord=\"top-left:(1606,315); bottom-right:(1715,429)\" /></figure>\n<h1 id='4' style='font-size:20px'>원활한 장학금 수혜를 위해 사전에 장학금을 수혜받으실 계좌번호를 등록해주시기 바랍니다.<br>(이미지는 클릭하면 원본파일을 볼 수 있습니다)</h1>\n<figure id='5'><img alt=\"\" data-coord=\"top-left:(274,617); bottom-right:(1474,1966)\" /></figure>\n<h1 id='6' style='font-size:22px'>등록방법</h1>\n<p id='7' data-category='list' style='font-size:18px'>1 모바일 앱 실행 → 학사정보시스템 선택<br>2 학사 → 장학 → 장학신청관리 → 장학금수혜계좌등록 선택<br>3 은행, 계좌번호, 예금주 입력<br>4 저장 버튼 클릭</p>\n<br><footer id='8' style='font-size:14px'>USER<br>SERVICE</footer>\n<p id='9' data-category='paragraph' style='font-size:20px'>유의사항</p>\n<p id='10' data-category='list' style='font-size:16px'>학생 본인 계좌를 입력하여야 함(예금주가 학적의 성명과 동일해야 함)</p>\n<br><p id='11' data-category='list' style='font-size:16px'>계좌번호 입력 시 \"하이픈(-)\", \"빈칸\"이 없도록 입력</p>\n<br><p id='12' data-category='list' style='font-size:16px'>외국인 학생은 학적에 등록되어 있는 한글명과 동일한 예금주일 경우 등록됨</p>\n<p id='13' data-category='paragraph' style='font-size:14px'>콘텐츠 담당부서 및 연락처</p>\n<p id='14' data-category='paragraph' style='font-size:14px'>장학복지팀</p>\n<br><p id='15' data-category='paragraph' style='font-size:14px'>02-450-3511~2</p>\n<br><figure id='16'><img alt=\"\" data-coord=\"top-left:(1604,316); bottom-right:(1716,426)\" /></figure>",
+    "markdown": "장학금 수혜계좌 등록\n\n장학금 수혜계좌 등록\n\n장학금 수혜계좌 등록 방법\n\n![image](/image/placeholder)\n\n\n# 원활한 장학금 수혜를 위해 사전에 장학금을 수혜받으실 계좌번호를 등록해주시기 바랍니다.\n(이미지는 클릭하면 원본파일을 볼 수 있습니다)\n\n![image](/image/placeholder)\n\n\n# 등록방법\n\n- 1 모바일 앱 실행 → 학사정보시스템 선택\n- 2 학사 → 장학 → 장학신청관리 → 장학금수혜계좌등록 선택\n- 3 은행, 계좌번호, 예금주 입력\n- 4 저장 버튼 클릭\n\n\nUSER\nSERVICE\n\n유의사항\n\n- 학생 본인 계좌를 입력하여야 함(예금주가 학적의 성명과 동일해야 함)\n\n\n- 계좌번호 입력 시 \"하이픈(-)\", \"빈칸\"이 없도록 입력\n\n\n- 외국인 학생은 학적에 등록되어 있는 한글명과 동일한 예금주일 경우 등록됨\n\n\n콘텐츠 담당부서 및 연락처\n\n장학복지팀\n\n02-450-3511~2\n\n![image](/image/placeholder)",
+    "text": ""
+  },
+  "elements": [
+    {
+      "category": "header",
+      "content": {
+        "html": "<header id='0' style='font-size:16px'>장학금 수혜계좌 등록</header>",
+        "markdown": "장학금 수혜계좌 등록",
+        "text": ""
+      },
+      "coordinates": [
+        {
+          "x": 0.4345,
+          "y": 0.0539
+        },
+        {
+          "x": 0.5655,
+          "y": 0.0539
+        },
+        {
+          "x": 0.5655,
+          "y": 0.0688
+        },
+        {
+          "x": 0.4345,
+          "y": 0.0688
+        }
+      ],
+      "id": 0,
+      "page": 1
+    },
+    {
+      "category": "paragraph",
+      "content": {
+        "html": "<p id='1' data-category='paragraph' style='font-size:22px'>장학금 수혜계좌 등록</p>",
+        "markdown": "장학금 수혜계좌 등록",
+        "text": ""
+      },
+      "coordinates": [
+        {
+          "x": 0.0142,
+          "y": 0.1067
+        },
+        {
+          "x": 0.2489,
+          "y": 0.1067
+        },
+        {
+          "x": 0.2489,
+          "y": 0.1296
+        },
+        {
+          "x": 0.0142,
+          "y": 0.1296
+        }
+      ],
+      "id": 1,
+      "page": 1
+    },
+    {
+      "category": "paragraph",
+      "content": {
+        "html": "<p id='2' data-category='paragraph' style='font-size:22px'>장학금 수혜계좌 등록 방법</p>",
+        "markdown": "장학금 수혜계좌 등록 방법",
+        "text": ""
+      },
+      "coordinates": [
+        {
+          "x": 0.0153,
+          "y": 0.1499
+        },
+        {
+          "x": 0.3206,
+          "y": 0.1499
+        },
+        {
+          "x": 0.3206,
+          "y": 0.1727
+        },
+        {
+          "x": 0.0153,
+          "y": 0.1727
+        }
+      ],
+      "id": 2,
+      "page": 1
+    },
+    {
+      "category": "figure",
+      "content": {
+        "html": "<br><figure id='3'><img alt=\"\" data-coord=\"top-left:(1606,315); bottom-right:(1715,429)\" /></figure>",
+        "markdown": "![image](/image/placeholder)\n",
+        "text": ""
+      },
+      "coordinates": [
+        {
+          "x": 0.9165,
+          "y": 0.1272
+        },
+        {
+          "x": 0.9786,
+          "y": 0.1272
+        },
+        {
+          "x": 0.9786,
+          "y": 0.1732
+        },
+        {
+          "x": 0.9165,
+          "y": 0.1732
+        }
+      ],
+      "id": 3,
+      "page": 1
+    },
+    {
+      "category": "heading1",
+      "content": {
+        "html": "<h1 id='4' style='font-size:20px'>원활한 장학금 수혜를 위해 사전에 장학금을 수혜받으실 계좌번호를 등록해주시기 바랍니다.<br>(이미지는 클릭하면 원본파일을 볼 수 있습니다)</h1>",
+        "markdown": "# 원활한 장학금 수혜를 위해 사전에 장학금을 수혜받으실 계좌번호를 등록해주시기 바랍니다.\n(이미지는 클릭하면 원본파일을 볼 수 있습니다)",
+        "text": ""
+      },
+      "coordinates": [
+        {
+          "x": 0.0151,
+          "y": 0.1893
+        },
+        {
+          "x": 0.5962,
+          "y": 0.1893
+        },
+        {
+          "x": 0.5962,
+          "y": 0.2252
+        },
+        {
+          "x": 0.0151,
+          "y": 0.2252
+        }
+      ],
+      "id": 4,
+      "page": 1
+    },
+    {
+      "category": "figure",
+      "content": {
+        "html": "<figure id='5'><img alt=\"\" data-coord=\"top-left:(274,617); bottom-right:(1474,1966)\" /></figure>",
+        "markdown": "![image](/image/placeholder)\n",
+        "text": ""
+      },
+      "coordinates": [
+        {
+          "x": 0.1566,
+          "y": 0.2487
+        },
+        {
+          "x": 0.841,
+          "y": 0.2487
+        },
+        {
+          "x": 0.841,
+          "y": 0.7926
+        },
+        {
+          "x": 0.1566,
+          "y": 0.7926
+        }
+      ],
+      "id": 5,
+      "page": 1
+    },
+    {
+      "category": "heading1",
+      "content": {
+        "html": "<h1 id='6' style='font-size:22px'>등록방법</h1>",
+        "markdown": "# 등록방법",
+        "text": ""
+      },
+      "coordinates": [
+        {
+          "x": 0.0322,
+          "y": 0.8215
+        },
+        {
+          "x": 0.1341,
+          "y": 0.8215
+        },
+        {
+          "x": 0.1341,
+          "y": 0.8423
+        },
+        {
+          "x": 0.0322,
+          "y": 0.8423
+        }
+      ],
+      "id": 6,
+      "page": 1
+    },
+    {
+      "category": "list",
+      "content": {
+        "html": "<p id='7' data-category='list' style='font-size:18px'>1 모바일 앱 실행 → 학사정보시스템 선택<br>2 학사 → 장학 → 장학신청관리 → 장학금수혜계좌등록 선택<br>3 은행, 계좌번호, 예금주 입력<br>4 저장 버튼 클릭</p>",
+        "markdown": "- 1 모바일 앱 실행 → 학사정보시스템 선택\n- 2 학사 → 장학 → 장학신청관리 → 장학금수혜계좌등록 선택\n- 3 은행, 계좌번호, 예금주 입력\n- 4 저장 버튼 클릭\n",
+        "text": ""
+      },
+      "coordinates": [
+        {
+          "x": 0.0139,
+          "y": 0.8561
+        },
+        {
+          "x": 0.4216,
+          "y": 0.8561
+        },
+        {
+          "x": 0.4216,
+          "y": 0.9507
+        },
+        {
+          "x": 0.0139,
+          "y": 0.9507
+        }
+      ],
+      "id": 7,
+      "page": 1
+    },
+    {
+      "category": "footer",
+      "content": {
+        "html": "<br><footer id='8' style='font-size:14px'>USER<br>SERVICE</footer>",
+        "markdown": "USER\nSERVICE",
+        "text": ""
+      },
+      "coordinates": [
+        {
+          "x": 0.918,
+          "y": 0.5881
+        },
+        {
+          "x": 0.9663,
+          "y": 0.5881
+        },
+        {
+          "x": 0.9663,
+          "y": 0.6304
+        },
+        {
+          "x": 0.918,
+          "y": 0.6304
+        }
+      ],
+      "id": 8,
+      "page": 1
+    },
+    {
+      "category": "paragraph",
+      "content": {
+        "html": "<p id='9' data-category='paragraph' style='font-size:20px'>유의사항</p>",
+        "markdown": "유의사항",
+        "text": ""
+      },
+      "coordinates": [
+        {
+          "x": 0.0333,
+          "y": 0.0324
+        },
+        {
+          "x": 0.1353,
+          "y": 0.0324
+        },
+        {
+          "x": 0.1353,
+          "y": 0.0541
+        },
+        {
+          "x": 0.0333,
+          "y": 0.0541
+        }
+      ],
+      "id": 9,
+      "page": 2
+    },
+    {
+      "category": "list",
+      "content": {
+        "html": "<p id='10' data-category='list' style='font-size:16px'>학생 본인 계좌를 입력하여야 함(예금주가 학적의 성명과 동일해야 함)</p>",
+        "markdown": "- 학생 본인 계좌를 입력하여야 함(예금주가 학적의 성명과 동일해야 함)\n",
+        "text": ""
+      },
+      "coordinates": [
+        {
+          "x": 0.014,
+          "y": 0.0684
+        },
+        {
+          "x": 0.4741,
+          "y": 0.0684
+        },
+        {
+          "x": 0.4741,
+          "y": 0.0832
+        },
+        {
+          "x": 0.014,
+          "y": 0.0832
+        }
+      ],
+      "id": 10,
+      "page": 2
+    },
+    {
+      "category": "list",
+      "content": {
+        "html": "<br><p id='11' data-category='list' style='font-size:16px'>계좌번호 입력 시 \"하이픈(-)\", \"빈칸\"이 없도록 입력</p>",
+        "markdown": "- 계좌번호 입력 시 \"하이픈(-)\", \"빈칸\"이 없도록 입력\n",
+        "text": ""
+      },
+      "coordinates": [
+        {
+          "x": 0.0148,
+          "y": 0.0933
+        },
+        {
+          "x": 0.3623,
+          "y": 0.0933
+        },
+        {
+          "x": 0.3623,
+          "y": 0.1078
+        },
+        {
+          "x": 0.0148,
+          "y": 0.1078
+        }
+      ],
+      "id": 11,
+      "page": 2
+    },
+    {
+      "category": "list",
+      "content": {
+        "html": "<br><p id='12' data-category='list' style='font-size:16px'>외국인 학생은 학적에 등록되어 있는 한글명과 동일한 예금주일 경우 등록됨</p>",
+        "markdown": "- 외국인 학생은 학적에 등록되어 있는 한글명과 동일한 예금주일 경우 등록됨\n",
+        "text": ""
+      },
+      "coordinates": [
+        {
+          "x": 0.0144,
+          "y": 0.1176
+        },
+        {
+          "x": 0.5099,
+          "y": 0.1176
+        },
+        {
+          "x": 0.5099,
+          "y": 0.1327
+        },
+        {
+          "x": 0.0144,
+          "y": 0.1327
+        }
+      ],
+      "id": 12,
+      "page": 2
+    },
+    {
+      "category": "paragraph",
+      "content": {
+        "html": "<p id='13' data-category='paragraph' style='font-size:14px'>콘텐츠 담당부서 및 연락처</p>",
+        "markdown": "콘텐츠 담당부서 및 연락처",
+        "text": ""
+      },
+      "coordinates": [
+        {
+          "x": 0.0502,
+          "y": 0.2059
+        },
+        {
+          "x": 0.2035,
+          "y": 0.2059
+        },
+        {
+          "x": 0.2035,
+          "y": 0.2208
+        },
+        {
+          "x": 0.0502,
+          "y": 0.2208
+        }
+      ],
+      "id": 13,
+      "page": 2
+    },
+    {
+      "category": "paragraph",
+      "content": {
+        "html": "<p id='14' data-category='paragraph' style='font-size:14px'>장학복지팀</p>",
+        "markdown": "장학복지팀",
+        "text": ""
+      },
+      "coordinates": [
+        {
+          "x": 0.095,
+          "y": 0.2369
+        },
+        {
+          "x": 0.1639,
+          "y": 0.2369
+        },
+        {
+          "x": 0.1639,
+          "y": 0.2517
+        },
+        {
+          "x": 0.095,
+          "y": 0.2517
+        }
+      ],
+      "id": 14,
+      "page": 2
+    },
+    {
+      "category": "paragraph",
+      "content": {
+        "html": "<br><p id='15' data-category='paragraph' style='font-size:14px'>02-450-3511~2</p>",
+        "markdown": "02-450-3511~2",
+        "text": ""
+      },
+      "coordinates": [
+        {
+          "x": 0.3216,
+          "y": 0.2372
+        },
+        {
+          "x": 0.4244,
+          "y": 0.2372
+        },
+        {
+          "x": 0.4244,
+          "y": 0.2524
+        },
+        {
+          "x": 0.3216,
+          "y": 0.2524
+        }
+      ],
+      "id": 15,
+      "page": 2
+    },
+    {
+      "category": "figure",
+      "content": {
+        "html": "<br><figure id='16'><img alt=\"\" data-coord=\"top-left:(1604,316); bottom-right:(1716,426)\" /></figure>",
+        "markdown": "![image](/image/placeholder)\n",
+        "text": ""
+      },
+      "coordinates": [
+        {
+          "x": 0.9153,
+          "y": 0.1275
+        },
+        {
+          "x": 0.9791,
+          "y": 0.1275
+        },
+        {
+          "x": 0.9791,
+          "y": 0.1719
+        },
+        {
+          "x": 0.9153,
+          "y": 0.1719
+        }
+      ],
+      "id": 16,
+      "page": 2
+    }
+  ],
+  "model": "document-parse-260128",
+  "ocr": false,
+  "usage": {
+    "pages": 2,
+    "standard": [
+      1,
+      2
+    ]
+  }
+}
