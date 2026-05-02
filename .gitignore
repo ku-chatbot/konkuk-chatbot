@@ -4,5 +4,9 @@ backend/.venv/
 backend/kubot.db
 backend/__pycache__/
 backend/app/**/__pycache__/
+backend/tests/**/__pycache__/
+backend/.pytest_cache/
 frontend/node_modules/
 frontend/dist/
+.claude/
+package-lock.json
