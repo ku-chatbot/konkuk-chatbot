@@ -110,15 +110,6 @@ class QueryLog(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
 
-class AcademicDocument(Base):
-    __tablename__ = "academic_document"
-
-    id = Column(Integer, primary_key=True)
-    title = Column(String(120), nullable=False)
-    category = Column(String(40), nullable=False)
-    content = Column(Text, nullable=False)
-
-
 class ReferenceDocument(Base):
     __tablename__ = "reference_document"
 

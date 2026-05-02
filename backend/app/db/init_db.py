@@ -3,7 +3,7 @@ from random import Random
 from sqlalchemy.orm import Session
 
 from app.core.security import hash_password
-from app.models import AcademicDocument, Base, Course, Enrollment, Prerequisite, Professor, Schedule, Student, Tuition
+from app.models import Base, Course, Enrollment, Prerequisite, Professor, Schedule, Student, Tuition
 from app.db.session import engine
 
 
@@ -22,7 +22,11 @@ def seed_db(db: Session) -> None:
     course_specs = _konkuk_2026_1_course_specs()
     professor_names = sorted({spec["professor"] for spec in course_specs})
     professors = [
-        Professor(name=name, email="공식 강의시간표 미제공", office="공식 강의시간표 미제공")
+        Professor(
+            name=name,
+            email=f"prof{i:03d}@konkuk.ac.kr",
+            office=f"공A{300 + i}호",
+        )
         for i, name in enumerate(professor_names, start=1)
     ]
     db.add_all(professors)
@@ -89,7 +93,6 @@ def seed_db(db: Session) -> None:
             )
         )
 
-    db.add_all(_academic_documents())
     db.commit()
 
 
@@ -136,46 +139,3 @@ def _parse_room_text(room_text: str) -> list[dict[str, str]]:
     return schedules or [{"day_of_week": "미정", "start_time": "미정", "end_time": "미정", "room": room_text}]
 
 
-def _academic_documents() -> list[AcademicDocument]:
-    return [
-        AcademicDocument(
-            title="휴학 신청 안내",
-            category="학적",
-            content="일반휴학 신청은 학기 개시 전 지정 기간에 포털 학사서비스에서 신청합니다. 군휴학은 입영통지서 등 증빙서류를 제출해야 하며, 승인 후 학적 상태가 휴학으로 변경됩니다.",
-        ),
-        AcademicDocument(
-            title="복학 신청 안내",
-            category="학적",
-            content="복학 예정자는 정해진 복학 신청 기간에 포털에서 신청해야 합니다. 등록금 납부와 수강신청은 복학 승인 이후 진행할 수 있습니다.",
-        ),
-        AcademicDocument(
-            title="수강신청 정정",
-            category="수업",
-            content="수강신청 정정 기간에는 여석이 있는 과목에 한해 수강 과목을 추가하거나 삭제할 수 있습니다. 정정 완료 후 개인 시간표를 반드시 확인해야 합니다.",
-        ),
-        AcademicDocument(
-            title="졸업 요건",
-            category="졸업",
-            content="졸업을 위해서는 전공 필수, 전공 선택, 교양, 총 이수 학점, 졸업 프로젝트 또는 졸업 논문 요건을 충족해야 합니다. 세부 기준은 입학년도와 학과별 교육과정에 따라 다릅니다.",
-        ),
-        AcademicDocument(
-            title="장학 제도",
-            category="장학",
-            content="성적장학, 국가장학, 근로장학, 교내외 특별장학이 운영됩니다. 장학금은 신청 자격, 성적 기준, 소득 구간, 제출 서류에 따라 심사됩니다.",
-        ),
-        AcademicDocument(
-            title="등록금 납부",
-            category="등록",
-            content="등록금은 지정된 납부 기간에 가상계좌 또는 카드 납부 방식으로 납부합니다. 납부 완료 여부는 포털 등록금 조회 메뉴에서 확인할 수 있습니다.",
-        ),
-        AcademicDocument(
-            title="출석 인정",
-            category="수업",
-            content="질병, 경조사, 예비군 훈련 등 정당한 사유가 있는 경우 증빙서류를 제출하여 출석 인정을 신청할 수 있습니다. 인정 범위는 학사 운영 규정에 따릅니다.",
-        ),
-        AcademicDocument(
-            title="전과 및 다전공",
-            category="학적",
-            content="전과, 복수전공, 부전공 신청은 정해진 기간에 접수하며 학점, 성적, 학과별 심사 기준을 충족해야 합니다.",
-        ),
-    ]

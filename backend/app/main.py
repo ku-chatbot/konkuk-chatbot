@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import get_settings
 from app.db.init_db import create_tables, seed_db
 from app.db.session import SessionLocal
-from app.routers import auth, chat, chat_v2, mcp, students
+from app.routers import auth, chat, mcp, students
 
 
 @asynccontextmanager
@@ -35,7 +35,6 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(students.router)
 app.include_router(chat.router)
-app.include_router(chat_v2.router)
 app.include_router(mcp.router)
 
 

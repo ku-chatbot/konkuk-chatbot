@@ -36,6 +36,8 @@ def extract_html(parse_result: dict[str, Any]) -> str:
     return value if isinstance(value, str) else ""
 
 
+# NOTE: max_chars는 document_ingestion._embedding_text의 max_chars(2500)보다 작아야
+# 검색 임베딩과 LLM에 전달되는 청크 본문이 일치한다. 늘릴 경우 두 상수를 같이 점검할 것.
 def extract_chunks(parse_result: dict[str, Any], max_chars: int = 1800) -> list[ParsedChunk]:
     element_chunks = _chunks_from_elements(parse_result)
     if element_chunks:

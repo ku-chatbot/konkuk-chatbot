@@ -1,5 +1,4 @@
 from app.models.academic import (
-    AcademicDocument,
     Course,
     Enrollment,
     Prerequisite,
@@ -14,7 +13,6 @@ from app.models.academic import (
 from app.models.base import Base
 
 __all__ = [
-    "AcademicDocument",
     "Base",
     "Course",
     "Enrollment",

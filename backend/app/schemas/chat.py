@@ -1,6 +1,9 @@
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel
+
+
+DisplayFormat = Literal["summary", "table"]
 
 
 class ChatRequest(BaseModel):
@@ -10,6 +13,7 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     route: str
     answer: str
+    display_format: DisplayFormat = "summary"
     sql: str | None = None
     rows: list[dict[str, Any]] = []
     sources: list[str] = []

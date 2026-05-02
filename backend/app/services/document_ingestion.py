@@ -123,4 +123,6 @@ def _safe_stem(file_path: str) -> str:
 
 
 def _embedding_text(text: str, max_chars: int = 2500) -> str:
+    # NOTE: document_parser.extract_chunks(max_chars=1800)보다 커야 검색 임베딩과
+    # LLM 컨텍스트가 일치한다. 청크 크기를 늘릴 경우 이 값도 함께 조정.
     return text[:max_chars]
