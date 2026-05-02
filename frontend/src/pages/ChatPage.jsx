@@ -36,7 +36,7 @@ export default function ChatPage({ student, onLogout }) {
     setMessages((prev) => [...prev, { role: 'user', text: trimmed }])
     setLoading(true)
     try {
-      const data = await api('/chat-v2', {
+      const data = await api('/chat', {
         method: 'POST',
         body: JSON.stringify({ message: trimmed }),
       })
@@ -46,6 +46,8 @@ export default function ChatPage({ student, onLogout }) {
           role: 'assistant',
           text: data.answer,
           route: data.route,
+          displayFormat: data.display_format,
+          rows: data.rows,
           sql: data.sql,
           sources: data.sources,
         },

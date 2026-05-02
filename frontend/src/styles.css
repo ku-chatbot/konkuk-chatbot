@@ -464,3 +464,35 @@ code {
     grid-template-columns: 1fr;
   }
 }
+
+.row-table-wrap {
+  margin-top: 10px;
+  overflow-x: auto;
+  border-radius: 10px;
+  border: 1px solid #d6e5dc;
+}
+
+.row-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+  background: #ffffff;
+}
+
+.row-table th,
+.row-table td {
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 1px solid #e3ecea;
+  white-space: nowrap;
+}
+
+.row-table thead th {
+  background: #eef6f0;
+  font-weight: 600;
+  color: #17211b;
+}
+
+.row-table tbody tr:last-child td {
+  border-bottom: 0;
+}
