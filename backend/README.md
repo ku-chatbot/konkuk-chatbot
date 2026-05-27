@@ -71,3 +71,13 @@ FAISS는 벡터 검색만 담당하고, 실제 chunk 본문과 출처는 SQLite�
 ```bash
 python -m py_compile app/services/query_service.py app/services/reference_rag_service.py app/services/web_search_service.py
 ```
+
+## Hugging Face Space 배포
+
+무료 배포에서 `BAAI/bge-m3`를 유지하려면 Docker Space를 사용합니다. `backend` 폴더에는 Space 배포용 파일이 포함되어 있습니다.
+
+- `Dockerfile`: Python 3.12 환경에서 백엔드 의존성을 설치하고 `start_hf.sh` 실행
+- `start_hf.sh`: 임베딩 서버(`127.0.0.1:9000`)와 메인 FastAPI 서버(`0.0.0.0:7860`)를 함께 실행
+- `SPACE_README.md`: Hugging Face Space의 `README.md`로 사용할 설정 파일
+
+Space repo에는 `backend` 폴더 안의 파일들을 복사하되, `SPACE_README.md`는 Space repo의 `README.md`로 이름을 바꿔 넣습니다. `.env`는 복사하지 말고 Space의 `Settings > Variables and secrets`에 Secret으로 등록합니다.
