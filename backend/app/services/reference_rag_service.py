@@ -30,13 +30,17 @@ class ReferenceRAGAnswer:
 
 
 class ReferenceRAGService:
-    def answer(self, db: Session, message: str, top_k: int = 5) -> ReferenceRAGAnswer:
-        chunks = self._retrieve(db, message, top_k)
+    def answer(self, db: Session, message: str, top_k: int = 5, domain: str | None = None, domains: list[str] | None = None, intent: str | None = None) -> ReferenceRAGAnswer:
+        domain = domain or _infer_domain(message)
+        domains = domains or _infer_domains(message)
+        intent = intent or _infer_intent(message)
+        chunks = self._retrieve_for_domains(db, message, domains, top_k)
         chunks = self._augment_action_path_chunks(db, message, chunks)
+        chunks = self._filter_chunks_by_domains(chunks, domains, intent)
         if not chunks:
             return ReferenceRAGAnswer(
                 route="reference_rag",
-                answer="아직 업로드된 참고문서에서 관련 내용을 찾지 못했습니다. 문서를 먼저 ingestion했는지 확인해주세요.",
+                answer="연결된 공식 참고문서에서 해당 주제에 맞는 근거를 찾지 못했습니다. 질문을 조금 더 구체적으로 적거나, 최신 공지성 정보라면 학교 홈페이지 공지사항을 확인해주세요.",
                 sources=[],
             )
         if not self._has_enough_evidence(message, chunks):
@@ -50,6 +54,9 @@ class ReferenceRAGService:
         instructions = (
             "당신은 건국대학교 공식 참고문서 기반 챗봇입니다. "
             "제공된 문서 발췌문 안에서만 답하세요. "
+            f"현재 질문 주제(domains)는 {domains}, 대표 주제(domain)는 {domain}, 의도(intent)는 {intent}입니다. "
+            "질문 주제와 다른 제도나 메뉴를 섞어 답하지 마세요. "
+            "여러 주제가 함께 들어온 질문이면 주제별로 확인된 내용을 나누어 답하세요. "
             "질문에 직접 답할 근거가 부족하면 answerable=false로 반환하고 답을 꾸며내지 마세요. "
             "문서에 없는 내용은 추측하지 말고 확인이 필요하다고 말하세요. "
             "답변 본문에는 출처/참고 섹션을 만들지 마세요. 출처는 시스템이 별도로 표시합니다. "
@@ -73,6 +80,29 @@ class ReferenceRAGService:
         answer = self._render_answer(data, message) if data else self._fallback_answer(chunks)
         sources = self._selected_sources(chunks, data)
         return ReferenceRAGAnswer(route="reference_rag", answer=answer, sources=[source.label() for source in sources])
+
+    def _retrieve_for_domains(self, db: Session, message: str, domains: list[str], top_k: int) -> list[ReferenceChunk]:
+        queries = [message]
+        for domain in domains:
+            hint = _domain_search_hint(domain)
+            if hint:
+                queries.append(f"{message} {hint}")
+        chunks: list[ReferenceChunk] = []
+        seen_ids: set[int] = set()
+        for query in dict.fromkeys(queries):
+            for chunk in self._retrieve(db, query, top_k):
+                if chunk.id in seen_ids:
+                    continue
+                seen_ids.add(chunk.id)
+                chunks.append(chunk)
+        return chunks
+
+    def _filter_chunks_by_domains(self, chunks: list[ReferenceChunk], domains: list[str], intent: str) -> list[ReferenceChunk]:
+        filter_domains = [domain for domain in domains if domain not in {"unknown", "course", "professor", "grade", "schedule", "tuition", "event"}]
+        if not filter_domains:
+            return chunks
+        filtered = [chunk for chunk in chunks if any(_chunk_matches_domain(chunk, domain, intent) for domain in filter_domains)]
+        return filtered
 
     def _retrieve(self, db: Session, message: str, top_k: int) -> list[ReferenceChunk]:
         query_vector = embedding_client.embed(message)
@@ -283,3 +313,72 @@ def _leave_action_path(message: str) -> str | None:
     if "휴학" in message and "신청" in message and asks_action_path:
         return "학사정보시스템(kuis.konkuk.ac.kr) 접속 후 `학적` 메뉴의 학적변동 신청(휴복학 신청)에서 진행하세요."
     return None
+
+
+def _infer_domain(message: str) -> str:
+    return _infer_domains(message)[0]
+
+
+def _infer_domains(message: str) -> list[str]:
+    compact = message.replace(" ", "")
+    domain_keywords = [
+        ("leave", ["휴학", "미등록", "입대휴학", "가사휴학", "질병휴학", "육아휴학", "창업휴학"]),
+        ("return", ["복학"]),
+        ("graduation", ["졸업", "졸업요건", "졸업유예", "졸업가능", "졸업시뮬레이션"]),
+        ("course_registration", ["수강신청", "수강정정", "수강바구니", "계절학기", "전공인정", "학점인정"]),
+        ("scholarship", ["장학", "장학금", "장학복지팀"]),
+        ("international", ["교환학생", "국제교류"]),
+        ("tuition", ["등록금"]),
+    ]
+    domains = []
+    for domain, keywords in domain_keywords:
+        if any(keyword in compact for keyword in keywords):
+            domains.append(domain)
+    return domains or ["unknown"]
+
+
+def _domain_search_hint(domain: str) -> str | None:
+    hints = {
+        "leave": "가사휴학 재학 중 통산 6학기 휴학 가능 기간",
+        "graduation": "졸업유예 2회 1학기씩 총 1년 졸업 요건",
+        "course_registration": "수강신청 수강정정 수강바구니 기간",
+        "scholarship": "장학금 장학복지팀 연락처",
+        "international": "교환학생 국제교류",
+        "tuition": "등록금 납부",
+    }
+    return hints.get(domain)
+
+
+def _infer_intent(message: str) -> str:
+    compact = message.replace(" ", "")
+    if any(word in compact for word in ["언제", "언제까지", "기간", "몇일까지", "마감"]):
+        return "deadline"
+    if any(word in compact for word in ["어디", "경로", "링크", "홈페이지", "사이트", "확인", "조회", "보려면"]):
+        return "location"
+    if any(word in compact for word in ["서류", "준비물", "필요"]):
+        return "documents"
+    if any(word in compact for word in ["방법", "어떻게", "하는법", "신청"]):
+        return "method"
+    if any(word in compact for word in ["몇번", "몇회", "가능횟수", "얼마나"]):
+        return "count"
+    return "lookup"
+
+
+def _chunk_matches_domain(chunk: ReferenceChunk, domain: str, intent: str) -> bool:
+    text = f"{chunk.document.title} {chunk.document.category} {chunk.heading or ''} {chunk.content}".replace(" ", "")
+    keyword_map = {
+        "leave": ["휴학", "휴복학", "입대휴학", "가사휴학", "질병휴학", "육아휴학", "창업휴학"],
+        "return": ["복학", "휴복학"],
+        "graduation": ["졸업", "졸업요건", "졸업가능여부", "졸업시뮬레이션", "취득학점확인원", "졸업유예"],
+        "course_registration": ["수강신청", "수강정정", "수강바구니", "계절학기", "전공인정", "학점인정"],
+        "scholarship": ["장학", "장학금", "장학복지팀"],
+        "international": ["국제교류", "교환학생"],
+        "tuition": ["등록금", "납부"],
+    }
+    if any(keyword in text for keyword in keyword_map.get(domain, [])):
+        return True
+    if intent == "location" and domain == "leave":
+        return "학사정보시스템" in text and "휴복학" in text
+    if intent == "location" and domain == "graduation":
+        return "학사정보시스템" in text and ("졸업" in text or "취득학점확인원" in text)
+    return False

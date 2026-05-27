@@ -122,6 +122,19 @@ class QueryLog(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
 
+class ConversationState(Base):
+    __tablename__ = "conversation_state"
+
+    id = Column(Integer, primary_key=True)
+    student_id = Column(Integer, nullable=False, unique=True)
+    domain = Column(String(40), nullable=False, default="unknown")
+    intent = Column(String(40), nullable=False, default="lookup")
+    entities_json = Column(Text, nullable=False, default="{}")
+    last_question = Column(Text, nullable=False, default="")
+    last_route = Column(String(30), nullable=False, default="general")
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+
 class AcademicDocument(Base):
     __tablename__ = "academic_document"
 

@@ -44,6 +44,7 @@ class WebSearchService:
                 sources=[],
             )
         official_results = [result for result in results if self._is_usable_official_result(result)]
+        official_results.sort(key=lambda result: self._result_score(message, result), reverse=True)
         if not official_results:
             return WebSearchAnswer(
                 route="web_search",
@@ -92,11 +93,41 @@ class WebSearchService:
         return data.get("results") or []
 
     def _expanded_queries(self, message: str) -> list[str]:
+        priority_queries = []
         queries = [message]
         if "학과장" in message:
             queries.append(message.replace("학과장", "학부장"))
         if "컴공" in message:
             queries.append(message.replace("컴공", "컴퓨터공학부"))
+        if "교수진" in message or "교수소개" in message:
+            priority_queries.extend(
+                [
+                    "건국대학교 컴퓨터공학부 교수진",
+                    "건국대학교 컴퓨터공학부 교수소개",
+                    "컴퓨터공학부 교수진 cse 9960",
+                ]
+            )
+        if "취업지원센터" in message or "취업" in message:
+            priority_queries.extend(
+                [
+                    "건국대학교 취업지원센터 위치",
+                    "건국대학교 대학일자리플러스사업단 위치",
+                    "건국대학교 학생취창업처 위치",
+                ]
+            )
+        if "기숙사" in message:
+            priority_queries.extend(["건국대학교 기숙사 모집 일정", "건국대학교 생활관 모집 공지"])
+        if self._is_course_offering_query(message):
+            priority_queries.extend(
+                [
+                    "건국대학교 종합강의 시간표 컴퓨터공학부 개설강좌",
+                    "건국대학교 학사안내 수업 종합강의 시간표",
+                    "건국대학교 강의시간표 강의계획서 조회",
+                    "건국대학교 수강신청 종합강의시간표 조회",
+                    "건국대학교 컴퓨터공학부 개설과목 강의시간표",
+                ]
+            )
+        queries = priority_queries + queries
         date_match = re.search(r"(\d{1,2})월(\d{1,2})일", message)
         if date_match and not re.search(r"\d{4}년", message):
             year = datetime.now(ZoneInfo("Asia/Seoul")).year
@@ -152,6 +183,51 @@ class WebSearchService:
         lowered_url = url.lower()
         blocked_fragments = ["/sso/", "ssologin", "failurecause", "unauthorized", "login"]
         return not any(fragment in lowered_url for fragment in blocked_fragments)
+
+    def _result_score(self, message: str, result: dict) -> int:
+        compact = message.replace(" ", "")
+        title = (result.get("title") or "").replace(" ", "")
+        content = (result.get("content") or result.get("raw_content") or "").replace(" ", "")
+        url = (result.get("url") or "").lower()
+        haystack = f"{title} {content}"
+        score = 0
+        for token in re.findall(r"[가-힣A-Za-z0-9]+", compact):
+            if len(token) >= 2 and token in haystack:
+                score += 2
+        if "교수진" in compact or "교수소개" in compact:
+            if "교수진" in haystack or "교수소개" in haystack:
+                score += 12
+            if "/cse/" in url:
+                score += 8
+            if "/9960/" in url or "9960" in url:
+                score += 10
+            if "/bbs/" in url or "공지사항" in haystack:
+                score -= 10
+        if "취업지원센터" in compact or "취업" in compact:
+            if any(word in haystack for word in ["취업지원센터", "대학일자리", "학생취창업처", "취창업"]):
+                score += 12
+            if any(word in haystack for word in ["위치", "주소", "연락처", "전화"]):
+                score += 4
+        if "기숙사" in compact:
+            if "dorm.konkuk.ac.kr" in url:
+                score += 10
+            if any(word in haystack for word in ["기숙사", "생활관", "모집"]):
+                score += 8
+        if self._is_course_offering_query(message):
+            if any(word in haystack for word in ["종합강의시간표", "종합강의 시간표", "강의시간표", "강의계획서", "개설강좌", "개설과목"]):
+                score += 12
+            if any(word in haystack for word in ["학사안내", "수업", "수강신청"]):
+                score += 5
+            if "/konkuk/19338/" in url:
+                score += 8
+        return score
+
+    def _is_course_offering_query(self, message: str) -> bool:
+        compact = message.replace(" ", "")
+        has_term = any(word in compact for word in ["다음학기", "이번학기", "내년", "2026", "2027", "하계계절", "동계계절", "계절학기"])
+        asks_offering = any(word in compact for word in ["개설강좌", "개설과목", "강의시간표", "종합강의시간표", "어떤수업", "무슨수업", "수업들이열", "열려", "열리는수업"])
+        has_department = any(word in compact for word in ["컴퓨터공학", "컴공", "학과", "학부", "전공"])
+        return has_term and asks_offering and has_department
 
     def _search_domains(self) -> list[str]:
         settings = get_settings()

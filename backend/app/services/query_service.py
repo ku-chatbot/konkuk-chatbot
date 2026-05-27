@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass
 from datetime import datetime
@@ -9,7 +10,7 @@ from typing import Any
 from sqlalchemy import text
 from sqlalchemy.orm import Session, aliased
 
-from app.models import Course, CoursePrerequisiteNote, Enrollment, Prerequisite, Professor, QueryLog, Student
+from app.models import ConversationState, Course, CoursePrerequisiteNote, Enrollment, Prerequisite, Professor, QueryLog, Student
 from app.services.openai_client import openai_service
 from app.services.progress_service import progress_service
 from app.services.reference_rag_service import reference_rag_service
@@ -43,9 +44,20 @@ class QueryResult:
     sources: list[str] | None = None
 
 
+@dataclass
+class QueryUnderstanding:
+    domain: str
+    domains: list[str]
+    intent: str
+    entities: list[str]
+    explicit_domain: bool = False
+    is_followup_candidate: bool = False
+
+
 class QueryService:
     def answer(self, db: Session, student: Student, message: str, request_id: str | None = None) -> QueryResult:
         self._emit(request_id, "start", "질문을 분류하고 있습니다.", "DB, 공식문서, 웹검색 중 어디를 볼지 판단합니다.")
+        understanding = self._understand_query(message)
         general = self._answer_general(message)
         if general:
             self._log(db, student.student_id, message, general.route, None, True, None)
@@ -54,7 +66,12 @@ class QueryService:
         if event:
             self._log(db, student.student_id, message, event.route, None, True, None)
             return event
-        effective_message = message if self._is_explicit_db_question(db, message) else self._contextualize_followup(db, student, message)
+        state_message = self._apply_conversation_state(db, student, message, understanding)
+        if state_message != message:
+            effective_message = state_message
+        else:
+            effective_message = message if self._is_explicit_db_question(db, message) else self._contextualize_followup(db, student, message, understanding)
+        effective_understanding = self._understand_query(effective_message)
         privacy = self._privacy_violation(db, student, f"{message}\n{effective_message}")
         if privacy:
             self._log(db, student.student_id, message, privacy.route, None, True, None)
@@ -63,8 +80,14 @@ class QueryService:
         if clarification:
             self._log(db, student.student_id, message, clarification.route, None, True, None)
             return clarification
+        sourced = self._answer_with_source_planner(db, student, effective_message, effective_understanding, request_id=request_id)
+        if sourced:
+            self._update_conversation_state(db, student.student_id, effective_message, sourced.route)
+            self._log(db, student.student_id, message, sourced.route, sourced.sql, True, None)
+            return sourced
         planned = self._answer_with_planner(db, student, effective_message, request_id=request_id)
         if planned:
+            self._update_conversation_state(db, student.student_id, effective_message, planned.route)
             self._log(db, student.student_id, message, planned.route, None, True, None)
             return planned
         route = self._decide_route(db, effective_message)
@@ -72,16 +95,19 @@ class QueryService:
             self._emit(request_id, "db", "내부 학사 DB를 조회하고 있습니다.", "성적, 시간표, 과목, 교수 정보를 확인합니다.")
             result = self._answer_from_db(db, student, effective_message)
             if result:
+                self._update_conversation_state(db, student.student_id, effective_message, "db")
                 self._log(db, student.student_id, message, "db", result.sql, True, None)
                 return result
         if route == "reference_rag":
             self._emit(request_id, "reference_rag", "공식 학사문서를 검색하고 있습니다.", "관련 문서 조각을 찾고 출처를 확인합니다.", self._progress_keywords([effective_message]))
-            rag = reference_rag_service.answer(db, effective_message)
+            rag = reference_rag_service.answer(db, effective_message, domain=effective_understanding.domain, domains=effective_understanding.domains, intent=effective_understanding.intent)
+            self._update_conversation_state(db, student.student_id, effective_message, "reference_rag")
             self._log(db, student.student_id, message, "reference_rag", None, True, None)
             return QueryResult(route=rag.route, answer=rag.answer, rows=[], sources=rag.sources)
         if route == "web_search":
             self._emit(request_id, "web_search", "건국대학교 공식 페이지를 검색하고 있습니다.", "최신 공지나 홈페이지 정보를 확인합니다.", self._progress_keywords([effective_message]))
             web = web_search_service.answer(effective_message)
+            self._update_conversation_state(db, student.student_id, effective_message, "web_search")
             self._log(db, student.student_id, message, "web_search", None, True, None)
             return QueryResult(route=web.route, answer=web.answer, rows=[], sources=web.sources)
         result = QueryResult(route="general", answer="내부 DB나 공식 참고문서에서 확인할 수 있도록 질문을 조금 더 구체적으로 적어주세요.", rows=[], sources=[])
@@ -110,6 +136,152 @@ class QueryService:
         keywords: list[str] | None = None,
     ) -> None:
         progress_service.update(request_id, stage=stage, label=label, detail=detail, keywords=keywords or [])
+
+    def _understand_query(self, message: str) -> QueryUnderstanding:
+        compact = message.replace(" ", "")
+        domains = [
+            ("leave", ["휴학", "입대휴학", "가사휴학", "질병휴학", "육아휴학", "창업휴학", "미등록"]),
+            ("return", ["복학"]),
+            ("graduation", ["졸업", "졸업요건", "졸업유예", "졸업가능", "졸업시뮬레이션"]),
+            ("course_registration", ["수강신청", "수강정정", "수강바구니", "계절학기", "전공인정", "학점인정"]),
+            ("scholarship", ["장학", "장학금", "장학복지팀"]),
+            ("tuition", ["등록금", "납부"]),
+            ("grade", ["성적", "평점", "학점"]),
+            ("schedule", ["시간표"]),
+            ("professor", ["교수", "교수님", "학과장", "학부장", "연구실", "이메일"]),
+            ("course", ["과목", "수업", "강의실", "선수", "선수과목"]),
+            ("international", ["교환학생", "국제교류"]),
+            ("event", ["축제", "행사", "일정", "쉬는날", "휴일", "공휴일", "선거날", "선거일"]),
+        ]
+        matched_domains = []
+        for candidate, keywords in domains:
+            if any(keyword in compact for keyword in keywords):
+                matched_domains.append(candidate)
+        domain = matched_domains[0] if matched_domains else "unknown"
+        explicit_domain = bool(matched_domains)
+
+        if self._is_course_grading_policy_question(message):
+            intent = "course_grading_policy"
+            if "course" not in matched_domains:
+                matched_domains.insert(0, "course")
+            if "grade" in matched_domains:
+                matched_domains = [domain for domain in matched_domains if domain != "grade"]
+        elif "이메일" in compact:
+            intent = "email"
+        elif any(word in compact for word in ["연구실", "사무실", "office"]):
+            intent = "office"
+        elif "강의실" in compact:
+            intent = "classroom"
+        elif any(word in compact for word in ["언제", "언제까지", "기간", "몇일까지", "마감"]):
+            intent = "deadline"
+        elif any(word in compact for word in ["어디", "경로", "링크", "홈페이지", "사이트", "확인", "조회", "보려면"]):
+            intent = "location"
+        elif any(word in compact for word in ["서류", "준비물", "필요"]):
+            intent = "documents"
+        elif any(word in compact for word in ["방법", "어떻게", "하는법", "신청"]):
+            intent = "method"
+        elif any(word in compact for word in ["몇번", "몇회", "가능횟수", "얼마나"]):
+            intent = "count"
+        elif self._is_course_recommendation_question(message):
+            intent = "recommendation"
+        elif any(word in compact for word in ["전공인정", "인정돼", "인정되", "인정받", "학점인정"]):
+            intent = "credit_recognition"
+        else:
+            intent = "lookup"
+
+        entities = self._progress_keywords([message])
+        followup_words = ["그럼", "그러면", "그건", "그거", "이건", "이거", "어디", "언제", "서류", "필요", "2학기", "1학기", "미등록"]
+        is_followup_candidate = len(compact) <= 30 and any(word in compact for word in followup_words)
+        return QueryUnderstanding(
+            domain=domain,
+            domains=matched_domains or ["unknown"],
+            intent=intent,
+            entities=entities,
+            explicit_domain=explicit_domain,
+            is_followup_candidate=is_followup_candidate,
+        )
+
+    def _apply_conversation_state(self, db: Session, student: Student, message: str, current: QueryUnderstanding) -> str:
+        state = db.query(ConversationState).filter(ConversationState.student_id == student.student_id).first()
+        if state is None:
+            return message
+        entities = self._state_entities(state)
+        if not entities:
+            return message
+        compact = message.replace(" ", "")
+        has_course = bool(self._course_filter(db, message))
+        has_professor = self._professor_in_message(db, message) is not None
+        short_entityless = len(compact) <= 20 and not has_course and not has_professor
+        if not short_entityless:
+            return message
+
+        course = entities.get("course")
+        professor = entities.get("professor")
+        if any(word in compact for word in ["연구실", "사무실", "office"]) and (professor or course):
+            if professor:
+                return f"{professor} 교수님 연구실 알려줘"
+            return f"{course} 교수님 연구실 알려줘"
+        if "이메일" in compact and (professor or course):
+            if professor:
+                return f"{professor} 교수님 이메일 알려줘"
+            return f"{course} 교수님 이메일 알려줘"
+        if "강의실" in compact and course:
+            return f"{course} 강의실 알려줘"
+        if any(word in compact for word in ["교수", "교수님"]) and course:
+            return f"{course} 교수님 알려줘"
+        return message
+
+    def _state_entities(self, state: ConversationState) -> dict[str, str]:
+        try:
+            raw = json.loads(state.entities_json or "{}")
+        except json.JSONDecodeError:
+            return {}
+        if not isinstance(raw, dict):
+            return {}
+        return {str(key): str(value) for key, value in raw.items() if value}
+
+    def _update_conversation_state(self, db: Session, student_id: int, message: str, route: str) -> None:
+        understanding = self._understand_query(message)
+        entities = self._extract_state_entities(db, message)
+        if not entities and understanding.domain == "unknown":
+            return
+        state = db.query(ConversationState).filter(ConversationState.student_id == student_id).first()
+        if state is None:
+            state = ConversationState(student_id=student_id)
+            db.add(state)
+        previous_entities = self._state_entities(state)
+        if entities:
+            merged_entities = {**previous_entities, **entities}
+        elif understanding.domain != state.domain:
+            merged_entities = {}
+        else:
+            merged_entities = previous_entities
+        state.domain = understanding.domain
+        state.intent = understanding.intent
+        state.entities_json = json.dumps(merged_entities, ensure_ascii=False)
+        state.last_question = message
+        state.last_route = route
+        db.commit()
+
+    def _extract_state_entities(self, db: Session, message: str) -> dict[str, str]:
+        entities: dict[str, str] = {}
+        course_name = self._course_filter(db, message)
+        professor = self._professor_in_message(db, message)
+        if course_name:
+            entities["course"] = course_name
+            professor_name = (
+                db.query(Professor.name)
+                .join(Course, Course.professor_id == Professor.professor_id)
+                .filter(Course.name.contains(course_name))
+                .order_by(Course.name)
+                .limit(1)
+                .scalar()
+            )
+            if professor_name:
+                entities["professor"] = professor_name
+        if professor:
+            entities["professor"] = professor.name
+        return entities
 
     def execute_sql(self, db: Session, student: Student, sql: str) -> list[dict[str, Any]]:
         ok, reason = validate_select_sql(sql)
@@ -209,12 +381,31 @@ class QueryService:
             "축제",
             "행사",
             "일정",
+            "위치",
+            "주소",
+            "전화번호",
+            "연락처",
+            "운영시간",
+            "센터",
+            "부서",
+            "기관",
+            "교수진",
+            "교수소개",
         ]
         school_terms = ["건국대", "건국대학교", "컴퓨터공학부", "컴공", "konkuk", "KU"]
         chair_terms = ["학과장", "학부장"]
         if any(keyword in compact for keyword in chair_terms):
             return True
+        if self._is_course_offering_web_question(message):
+            return True
         return any(keyword in compact for keyword in web_keywords) and any(term in message for term in school_terms)
+
+    def _is_course_offering_web_question(self, message: str) -> bool:
+        compact = message.replace(" ", "")
+        has_term = any(word in compact for word in ["다음학기", "이번학기", "내년", "2026", "2027", "하계계절", "동계계절", "계절학기"])
+        asks_offering = any(word in compact for word in ["개설강좌", "개설과목", "강의시간표", "종합강의시간표", "어떤수업", "무슨수업", "수업들이열", "열려", "열리는수업"])
+        has_department = any(word in compact for word in ["컴퓨터공학", "컴공", "학과", "학부", "전공"])
+        return has_term and asks_offering and has_department
 
     def _is_holiday_question(self, message: str) -> bool:
         compact = message.replace(" ", "")
@@ -245,8 +436,15 @@ class QueryService:
         compact = message.replace(" ", "")
         return any(word in compact for word in ["추천", "관심", "들을만한", "수강할만한", "뭐들을"]) and any(word in compact for word in ["과목", "수업", "수강"])
 
+    def _is_course_grading_policy_question(self, message: str) -> bool:
+        compact = message.replace(" ", "")
+        grading_words = ["성적비율", "평가비율", "평가방법", "평가기준", "성적평가", "중간고사", "기말고사", "과제", "출석", "시험비율"]
+        return any(word in compact for word in grading_words)
+
     def _is_db_lookup_question(self, db: Session, message: str) -> bool:
         compact = message.replace(" ", "")
+        if self._is_course_grading_policy_question(message):
+            return False
         if self._is_department_professor_list_question(message):
             return True
         if any(word in compact for word in ["내성적", "나의성적", "저번학기성적", "이번학기성적", "내시간표", "오늘시간표", "내수강", "내등록금", "나의등록금"]):
@@ -265,6 +463,101 @@ class QueryService:
         asks_list = any(word in compact for word in ["교수목록", "교수진", "교수리스트", "교수님목록", "교수명단"])
         department = any(word in compact for word in ["컴퓨터공학", "컴공", "컴퓨터공학부", "컴퓨터공학과"])
         return asks_list and department
+
+    def _answer_with_source_planner(
+        self,
+        db: Session,
+        student: Student,
+        message: str,
+        understanding: QueryUnderstanding,
+        request_id: str | None = None,
+    ) -> QueryResult | None:
+        candidates = self._source_candidates(db, message, understanding)
+        if not candidates:
+            return None
+        self._emit(
+            request_id,
+            "source_planner",
+            "답변 근거를 찾을 위치를 정하고 있습니다.",
+            "질문 의도에 맞는 후보 소스만 확인합니다.",
+            candidates,
+        )
+        for candidate in candidates:
+            if candidate == "syllabus_rag":
+                return self._answer_from_syllabus_placeholder(db, message)
+            if candidate == "planned":
+                planned = self._answer_with_planner(db, student, message, request_id=request_id)
+                if planned and self._is_answerable(planned):
+                    return planned
+                continue
+            if candidate == "db":
+                self._emit(request_id, "db", "내부 학사 DB를 조회하고 있습니다.", "질문 의도와 맞는 DB 근거만 확인합니다.")
+                result = self._answer_from_db(db, student, message)
+                if result and self._is_answerable(result):
+                    return result
+                continue
+            if candidate == "reference_rag":
+                self._emit(request_id, "reference_rag", "공식 학사문서를 검색하고 있습니다.", "질문 주제와 맞는 문서 근거만 확인합니다.", self._progress_keywords([message]))
+                rag = reference_rag_service.answer(db, message, domain=understanding.domain, domains=understanding.domains, intent=understanding.intent)
+                result = QueryResult(route=rag.route, answer=rag.answer, rows=[], sources=rag.sources)
+                if self._is_answerable(result):
+                    return result
+                continue
+            if candidate == "web_search":
+                self._emit(request_id, "web_search", "건국대학교 공식 페이지를 검색하고 있습니다.", "최신 공식 홈페이지 근거를 확인합니다.", self._progress_keywords([message]))
+                web = web_search_service.answer(message)
+                result = QueryResult(route=web.route, answer=web.answer, rows=[], sources=web.sources)
+                if self._is_answerable(result) or "웹검색이 필요한 질문" in result.answer:
+                    return result
+        return None
+
+    def _source_candidates(self, db: Session, message: str, understanding: QueryUnderstanding) -> list[str]:
+        if self._is_course_grading_policy_question(message):
+            return ["syllabus_rag"]
+        if self._is_course_recommendation_question(message):
+            return ["planned"]
+        if self._is_course_offering_web_question(message):
+            return ["web_search"]
+        if understanding.domain == "course_registration" and understanding.intent in {"deadline", "location", "method", "lookup"}:
+            return ["reference_rag"]
+        if self._needs_planner(db, message):
+            return ["planned", "reference_rag"]
+        if self._is_web_search_question(message) or self._is_holiday_question(message):
+            return ["web_search"]
+        if understanding.domain in {"leave", "return", "graduation", "course_registration", "scholarship", "international"}:
+            return ["reference_rag"]
+        if self._is_db_lookup_question(db, message):
+            return ["db"]
+        if understanding.domain in {"grade", "schedule", "tuition", "professor", "course"}:
+            return ["db"]
+        return []
+
+    def _is_answerable(self, result: QueryResult) -> bool:
+        unanswerable_markers = [
+            "확인하지 못했습니다",
+            "찾지 못했습니다",
+            "조금 더 구체적으로",
+            "요청을 처리하지 못했습니다",
+        ]
+        if result.sources:
+            return True
+        if result.rows:
+            return True
+        return not any(marker in result.answer for marker in unanswerable_markers)
+
+    def _answer_from_syllabus_placeholder(self, db: Session, message: str) -> QueryResult:
+        course_name = self._course_filter(db, message)
+        subject = f"{course_name}의 " if course_name else ""
+        return QueryResult(
+            route="syllabus_rag",
+            answer=(
+                f"{subject}성적 비율/평가방법은 강의계획서의 평가 항목에서 확인해야 합니다. "
+                "현재 연결된 강의계획서 RAG 데이터가 없어 정확한 평가 비율은 확인할 수 없습니다. "
+                "강의계획서 데이터를 인제스트하면 중간고사, 기말고사, 과제, 출석 같은 평가 비율을 근거 기반으로 답변할 수 있습니다."
+            ),
+            rows=[],
+            sources=[],
+        )
 
     def _answer_with_planner(self, db: Session, student: Student, message: str, request_id: str | None = None) -> QueryResult | None:
         if not self._needs_planner(db, message):
@@ -456,7 +749,8 @@ class QueryService:
         match = re.search(r"이수구분:\s*([^,\.\n]+)", description)
         return match.group(1).strip() if match else None
 
-    def _contextualize_followup(self, db: Session, student: Student, message: str) -> str:
+    def _contextualize_followup(self, db: Session, student: Student, message: str, current: QueryUnderstanding | None = None) -> str:
+        current = current or self._understand_query(message)
         recent_logs = (
             db.query(QueryLog)
             .filter(QueryLog.student_id == student.student_id, QueryLog.route == "reference_rag")
@@ -474,9 +768,19 @@ class QueryService:
                 prior_conditions.append(log.message.strip())
         if previous is None:
             return message
-        if not self._looks_like_followup(message, previous.message):
+        previous_understanding = self._understand_query(previous.message)
+        if not self._should_use_memory(current, previous_understanding):
             return message
         return self._rewrite_followup(previous.message, message, list(reversed(prior_conditions)))
+
+    def _should_use_memory(self, current: QueryUnderstanding, previous: QueryUnderstanding) -> bool:
+        if current.explicit_domain and previous.explicit_domain and current.domain != previous.domain:
+            return False
+        if current.explicit_domain and current.domain != "unknown":
+            return current.domain == previous.domain and current.is_followup_candidate
+        if current.domain == "unknown":
+            return current.is_followup_candidate
+        return current.domain == previous.domain and current.is_followup_candidate
 
     def _looks_like_followup(self, message: str, previous_message: str | None = None) -> bool:
         compact = message.strip().replace(" ", "")

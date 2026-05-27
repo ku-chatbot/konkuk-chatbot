@@ -1,5 +1,6 @@
 from app.models.academic import (
     AcademicDocument,
+    ConversationState,
     Course,
     CoursePrerequisiteNote,
     Enrollment,
@@ -17,6 +18,7 @@ from app.models.base import Base
 __all__ = [
     "AcademicDocument",
     "Base",
+    "ConversationState",
     "Course",
     "CoursePrerequisiteNote",
     "Enrollment",
