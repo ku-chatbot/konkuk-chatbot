@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from app.models import ReferenceChunk, ReferenceDocument
 from app.services.document_manifest import DocumentSource, load_document_sources
 from app.services.document_parser import extract_chunks, extract_html, extract_markdown
-from app.services.local_embedding import local_embedding_service
+from app.services.embedding_client import embedding_client
 from app.services.upstage_client import upstage_document_parser
 from app.services.vector_store import reference_vector_store
 
@@ -114,7 +114,7 @@ def _rebuild_vector_index(db: Session) -> None:
     vector_ids = [int(row.vector_id) for row in rows if row.vector_id is not None]
     texts = [_embedding_text(row.content) for row in rows if row.vector_id is not None]
     db.close()
-    vectors = local_embedding_service.embed_many(texts)
+    vectors = embedding_client.embed_many(texts)
     reference_vector_store.save(vectors, vector_ids)
 
 

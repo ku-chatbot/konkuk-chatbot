@@ -97,6 +97,18 @@ class Prerequisite(Base):
     prereq_course = relationship("Course", foreign_keys=[pre_course_id], back_populates="is_prerequisite_for")
 
 
+class CoursePrerequisiteNote(Base):
+    __tablename__ = "course_prerequisite_note"
+
+    id = Column(Integer, primary_key=True)
+    course_id = Column(Integer, ForeignKey("course.course_id"), nullable=False, unique=True)
+    prerequisites = Column(Text, nullable=False)
+    note = Column(Text, nullable=False)
+    source_url = Column(Text, nullable=False)
+
+    course = relationship("Course")
+
+
 class QueryLog(Base):
     __tablename__ = "query_log"
 

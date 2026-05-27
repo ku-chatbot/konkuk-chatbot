@@ -1,6 +1,7 @@
 from app.models.academic import (
     AcademicDocument,
     Course,
+    CoursePrerequisiteNote,
     Enrollment,
     Prerequisite,
     Professor,
@@ -17,6 +18,7 @@ __all__ = [
     "AcademicDocument",
     "Base",
     "Course",
+    "CoursePrerequisiteNote",
     "Enrollment",
     "Prerequisite",
     "Professor",

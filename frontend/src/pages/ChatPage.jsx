@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { api } from '../api/client'
 import MessageBubble from '../components/MessageBubble'
 
@@ -23,22 +23,66 @@ export default function ChatPage({ student, onLogout }) {
     },
   ])
   const [loading, setLoading] = useState(false)
+  const [activeRequestId, setActiveRequestId] = useState(null)
+  const [progress, setProgress] = useState({
+    label: '질문을 확인하고 있습니다.',
+    detail: '요청을 준비하고 있습니다.',
+    keywords: [],
+  })
 
   const profile = useMemo(
     () => `${student.major} · ${student.student_id} · ${student.status}`,
     [student],
   )
 
+  useEffect(() => {
+    if (!activeRequestId || !loading) {
+      return undefined
+    }
+
+    let stopped = false
+    const fetchProgress = async () => {
+      try {
+        const data = await api(`/chat/progress/${activeRequestId}`)
+        if (!stopped) {
+          setProgress({
+            label: data.label || '답변을 준비하고 있습니다.',
+            detail: data.detail || null,
+            keywords: data.keywords || [],
+          })
+        }
+      } catch {
+        // Progress polling is best-effort. Keep the current visible state if
+        // the progress endpoint is unavailable or the backend is still warming.
+      }
+    }
+    fetchProgress()
+    const timer = window.setInterval(fetchProgress, 700)
+    return () => {
+      stopped = true
+      window.clearInterval(timer)
+    }
+  }, [activeRequestId, loading])
+
   async function send(text = message) {
     const trimmed = text.trim()
     if (!trimmed || loading) return
+    const requestId =
+      window.crypto?.randomUUID?.() ||
+      `${Date.now()}-${Math.random().toString(16).slice(2)}`
     setMessage('')
     setMessages((prev) => [...prev, { role: 'user', text: trimmed }])
     setLoading(true)
+    setActiveRequestId(requestId)
+    setProgress({
+      label: '질문을 확인하고 있습니다.',
+      detail: '서버에 요청을 보냈습니다.',
+      keywords: [],
+    })
     try {
-      const data = await api('/chat-v2', {
+      const data = await api('/chat', {
         method: 'POST',
-        body: JSON.stringify({ message: trimmed }),
+        body: JSON.stringify({ message: trimmed, request_id: requestId }),
       })
       setMessages((prev) => [
         ...prev,
@@ -57,6 +101,7 @@ export default function ChatPage({ student, onLogout }) {
       ])
     } finally {
       setLoading(false)
+      setActiveRequestId(null)
     }
   }
 
@@ -93,14 +138,23 @@ export default function ChatPage({ student, onLogout }) {
             <p>건국대학교 학사정보</p>
             <h1>무엇이 궁금한가요?</h1>
           </div>
-          <span>DB 우선 · 학사문서 검색</span>
         </header>
 
         <div className="message-list" aria-live="polite">
           {messages.map((item, index) => (
             <MessageBubble key={`${item.role}-${index}`} message={item} />
           ))}
-          {loading && <MessageBubble message={{ role: 'assistant', text: '확인하고 있습니다.', route: 'loading' }} />}
+          {loading && (
+            <MessageBubble
+              message={{
+                role: 'assistant',
+                text: progress.label,
+                detail: progress.detail,
+                keywords: progress.keywords,
+                route: 'loading',
+              }}
+            />
+          )}
         </div>
 
         <form

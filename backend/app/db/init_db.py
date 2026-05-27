@@ -1,9 +1,10 @@
+import re
 from random import Random
 
 from sqlalchemy.orm import Session
 
 from app.core.security import hash_password
-from app.models import AcademicDocument, Base, Course, Enrollment, Prerequisite, Professor, Schedule, Student, Tuition
+from app.models import AcademicDocument, Base, Course, CoursePrerequisiteNote, Enrollment, Prerequisite, Professor, Schedule, Student, Tuition
 from app.db.session import engine
 
 
@@ -21,8 +22,13 @@ def seed_db(db: Session) -> None:
     rng = Random(42)
     course_specs = _konkuk_2026_1_course_specs()
     professor_names = sorted({spec["professor"] for spec in course_specs})
+    professor_contacts = _cse_professor_contacts()
     professors = [
-        Professor(name=name, email="공식 강의시간표 미제공", office="공식 강의시간표 미제공")
+        Professor(
+            name=name,
+            email=professor_contacts.get(name, ("공식 홈페이지 확인 필요", "공식 홈페이지 확인 필요"))[0],
+            office=professor_contacts.get(name, ("공식 홈페이지 확인 필요", "공식 홈페이지 확인 필요"))[1],
+        )
         for i, name in enumerate(professor_names, start=1)
     ]
     db.add_all(professors)
@@ -51,15 +57,19 @@ def seed_db(db: Session) -> None:
     prereq_pairs = {
         "알고리즘": "자료구조",
         "데이터베이스": "자료구조",
-        "운영체제": "컴퓨터구조",
         "인공지능": "알고리즘",
         "기계학습": "인공지능",
         "자연어처리": "기계학습",
         "졸업프로젝트1(종합설계)": "객체지향개발방법론",
+        "졸업프로젝트2(종합설계)": "졸업프로젝트1(종합설계)",
     }
     for course_name, pre_name in prereq_pairs.items():
-        if course_name in course_by_name and pre_name in course_by_name:
-            db.add(Prerequisite(course_id=course_by_name[course_name].course_id, pre_course_id=course_by_name[pre_name].course_id))
+        target_courses = [course for course in courses if course.name == course_name]
+        prereq_course = next((course for course in courses if course.name == pre_name), None)
+        if prereq_course:
+            db.add_all(Prerequisite(course_id=course.course_id, pre_course_id=prereq_course.course_id) for course in target_courses)
+    for note in _official_prerequisite_notes(courses):
+        db.add(note)
 
     majors = ["컴퓨터공학부", "소프트웨어학과", "스마트ICT융합공학과", "인공지능학과"]
     family_names = ["김", "이", "박", "최", "정", "강", "조", "윤", "장", "임"]
@@ -109,6 +119,97 @@ def _konkuk_2026_1_course_specs() -> list[dict]:
         _course("기계학습", 3, "김학수", "월04-06(공A1510), 수04-06(공A1510)", "BBAB62866-3230"),
         _course("자연어처리", 3, "김학수", "월11-14(공A1510), 수11-14(공A1510)", "BBAB62876-3233"),
     ]
+
+
+def _official_prerequisite_notes(courses: list[Course]) -> list[CoursePrerequisiteNote]:
+    notes = {
+        "BBAB12053-3184": (
+            "미적분학, 선형대수학, C++ 프로그래밍 역량",
+            "2026학년도 1학기 공식 강의계획서 수강신청 유의사항: Prerequisites: Calculus, Linear Algebra, and C++ programming skills.",
+        ),
+        "BBAB12190-3186": (
+            "자료구조, C++ 프로그래밍, 시스템프로그래밍",
+            "2026학년도 1학기 공식 강의계획서 수강신청 유의사항: Prerequisite - Data Structure - C++ Programming - System Programming",
+        ),
+        "BBAB12190-3187": (
+            "시스템프로그래밍 수강 권장",
+            "2026학년도 1학기 공식 강의계획서 수강신청 유의사항: Students are recommended to complete System Programming class for better understanding of this class.",
+        ),
+        "BBAB12190-3188": (
+            "C프로그래밍, 시스템프로그래밍",
+            "2026학년도 1학기 공식 강의계획서 수강신청 유의사항: 선수과목: C프로그래밍, 시스템프로그래밍",
+        ),
+        "BBAB12190-3189": (
+            "C프로그래밍, 시스템프로그래밍",
+            "2026학년도 1학기 공식 강의계획서 수강신청 유의사항: 선수과목: C프로그래밍, 시스템프로그래밍",
+        ),
+        "BBAB62246-3226": (
+            "C프로그래밍, 시스템프로그래밍, 운영체제",
+            "2026학년도 1학기 공식 강의계획서 수강신청 유의사항: 선수과목: C프로그래밍, 시스템프로그래밍, 운영체제",
+        ),
+        "BBAB62866-3230": (
+            "중급 이상 Python 프로그래밍 능력 필요",
+            "2026학년도 1학기 공식 강의계획서 수강신청 유의사항: 본 과목은 일정 수준 이상(클래스 구현, numpy 활용 등 중급 이상)의 Python 프로그래밍 능력을 필요로 합니다.",
+        ),
+        "BBAB62866-3232": (
+            "기초 통계, 선형대수 기초, Python 프로그래밍",
+            "2026학년도 1학기 공식 강의계획서 수강신청 유의사항: Prerequisites - Basic knowledge of statistics - Basic knowledge of Linear Algebra - Python Programming",
+        ),
+        "BBAB67656-3244": (
+            "미적분학, 선형대수학, Python 프로그래밍 역량",
+            "2026학년도 1학기 공식 강의계획서 수강신청 유의사항: Prerequisites: Calculus, Linear Algebra, and Python programming skills.",
+        ),
+        "BBAB67656-3245": (
+            "미적분학, 선형대수학, Python 프로그래밍 역량",
+            "2026학년도 1학기 공식 강의계획서 수강신청 유의사항: Prerequisites: Calculus, Linear Algebra, and Python programming skills.",
+        ),
+    }
+    result = []
+    for course in courses:
+        matched = next((item for code, item in notes.items() if code in course.description), None)
+        if not matched:
+            continue
+        source_match = re.search(r"BBAB\d+-(\d+)", course.description)
+        source_id = source_match.group(1) if source_match else ""
+        result.append(
+            CoursePrerequisiteNote(
+                course_id=course.course_id,
+                prerequisites=matched[0],
+                note=matched[1],
+                source_url=f"https://kupis.konkuk.ac.kr/sugang/acd/cour/plan/CourLecturePlanInq.jsp?ltShtm=B01011&ltYy=2026&sbjtId={source_id}",
+            )
+        )
+    return result
+
+
+def _cse_professor_contacts() -> dict[str, tuple[str, str]]:
+    # 건국대학교 컴퓨터공학부 공식 교수진 페이지 기준: https://www.konkuk.ac.kr/cse/9960/subview.do
+    return {
+        "김기천": ("kckim@konkuk.ac.kr", "공C385-2"),
+        "김성열": ("kimsr@konkuk.ac.kr", "공C483-2"),
+        "김욱희": ("wookhee@konkuk.ac.kr", "공C422"),
+        "김학수": ("nlpdrkim@konkuk.ac.kr", "공C386-1"),
+        "김형석": ("hyuskim@konkuk.ac.kr", "신공학관 1006호"),
+        "문창주": ("cjmoon@konkuk.ac.kr", "공C285"),
+        "민덕기": ("dkmin@konkuk.ac.kr", "공C385"),
+        "박능수": ("neungsoo@konkuk.ac.kr", "공C384-1"),
+        "박소영": ("soyoungpark@konkuk.ac.kr", "공C421"),
+        "서재형": ("seojae777@konkuk.ac.kr", "공A1409-1"),
+        "신효섭": ("hsshin@konkuk.ac.kr", "공C386-2"),
+        "오병국": ("bkoh@konkuk.ac.kr", "공C384-2"),
+        "유준범": ("jbyoo@konkuk.ac.kr", "공C386"),
+        "윤경로": ("yoonk@konkuk.ac.kr", "공C384"),
+        "이향원": ("leehw@konkuk.ac.kr", "공C293-1"),
+        "임민규": ("mlim@konkuk.ac.kr", "공C292-1"),
+        "임창훈": ("cyim@konkuk.ac.kr", "공C292-3"),
+        "정갑주": ("jeongk@konkuk.ac.kr", "공C385-1"),
+        "지서원": ("seowonji@konkuk.ac.kr", "공C484"),
+        "지정희": ("jhchi@konkuk.ac.kr", "공C421"),
+        "진현욱": ("jinh@konkuk.ac.kr", "공C291-1"),
+        "차영운": ("youngcha@konkuk.ac.kr", "공C293-2"),
+        "하영국": ("ygha@konkuk.ac.kr", "공C291-2"),
+        "홍상우": ("swhong06@konkuk.ac.kr", "공A1513"),
+    }
 
 
 def _course(name: str, credit: int, professor: str, room_text: str, official_id: str) -> dict:
